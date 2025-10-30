@@ -1,0 +1,109 @@
+# =====================================
+# .gitignore per progetto Python (completo)
+# Versione: 1.0
+# =====================================
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Output e build ---
+output/
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# --- Ambienti virtuali ---
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# --- Configurazioni IDE ---
+# VS Code
+.vscode/
+# PyCharm / IntelliJ
+.idea/
+# Eclipse / PyDev
+.project
+.pydevproject
+.settings/
+# Spyder
+.spyproject/
+# Jupyter
+.ipynb_checkpoints/
+
+# --- File temporanei ---
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Test e coverage ---
+.coverage
+htmlcov/
+.tox/
+.nox/
+.cache/
+pytest_cache/
+coverage.xml
+nosetests.xml
+test-results/
+.pytest_cache/
+junit.xml
+
+# --- Documentazione temporanea ---
+docs/_build/
+site/
+
+# --- File vari ---
+*.spec
+*.manifest
+*.lock
+*.pickle
+*.pkl
+*.cfg
+*.ini~
+*.old
+
+# --- File personali ---
+*.env
+.env.local
+.env.*
+!.env.example
+
+# --- Dipendenze locali ---
+Pipfile
+Pipfile.lock
+poetry.lock
+
+# --- OS specifici ---
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# --- Backup e cache di editor ---
+*.bak
+*.orig
+*.rej
+*.tmp
+*~
+.cache/
+*.sublime-project
+*.sublime-workspace
+
+# --- Output QR ---
+output/
+
+# --- Loghi o risorse non pubbliche ---
+logo/*
