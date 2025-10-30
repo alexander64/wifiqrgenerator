@@ -1,12 +1,16 @@
 # =====================================
-# Versione: 1.4
+# Versione: 1.6
 # Script: wifi_qr_with_logo.py
-# Descrizione: Genera un QR code Wi-Fi compatibile con logo centrale.
-#              Il logo (.png o .ico) viene scelto automaticamente da ./logo/
-#              Ogni QR viene salvato in ./output/YYYY-MM-DD_HH-MM-SS/
+# Descrizione: Genera un QR code Wi-Fi compatibile con logo.
+#              Può essere standard o artistico puntinato.
+#              Logo scelto automaticamente da ./logo/
+#              Output in ./output/YYYY-MM-DD_HH-MM-SS/
 # =====================================
 
 import qrcode
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.moduledrawers import CircleModuleDrawer
+from qrcode.image.styles.colormasks import RadialGradiantColorMask
 from PIL import Image
 import os
 import sys
@@ -29,14 +33,15 @@ def find_logo(logo_dir: str) -> str:
     return os.path.join(logo_dir, logos[0])
 
 
-def generate_wifi_qr(ssid: str, password: str, output_filename: str = "wifi_qr.png"):
+def generate_wifi_qr(ssid: str, password: str, style: str = "standard", output_filename: str = "wifi_qr.png"):
     """
-    Genera un QR code per rete Wi-Fi con logo al centro e lo salva in una cartella datata.
+    Genera un QR code per rete Wi-Fi con logo al centro.
     
     Args:
         ssid (str): Nome rete Wi-Fi (SSID)
         password (str): Password Wi-Fi
-        output_filename (str): Nome file QR finale
+        style (str): "standard" o "artistico"
+        output_filename (str): Nome file finale dentro ./output/
     """
 
     # --- Percorsi base ---
@@ -47,7 +52,7 @@ def generate_wifi_qr(ssid: str, password: str, output_filename: str = "wifi_qr.p
     # --- Trova logo ---
     logo_path = find_logo(logo_dir)
 
-    # --- Crea cartella datata (solo data e ora) ---
+    # --- Crea cartella datata ---
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d_%H-%M-%S")
     output_dir = os.path.join(output_root, date_str)
@@ -67,7 +72,20 @@ def generate_wifi_qr(ssid: str, password: str, output_filename: str = "wifi_qr.p
     )
     qr.add_data(wifi_data)
     qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+
+    # --- Selezione stile ---
+    if style == "artistico":
+        qr_img = qr.make_image(
+            image_factory=StyledPilImage,
+            module_drawer=CircleModuleDrawer(),  # moduli circolari (puntinato)
+            color_mask=RadialGradiantColorMask(
+                back_color=(255, 255, 255),
+                center_color=(10, 10, 10),
+                edge_color=(60, 60, 60),
+            ),
+        ).convert("RGB")
+    else:
+        qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
 
     # --- Aggiunta logo ---
     logo = Image.open(logo_path)
@@ -81,16 +99,22 @@ def generate_wifi_qr(ssid: str, password: str, output_filename: str = "wifi_qr.p
 
     # --- Salva QR finale ---
     qr_img.save(output_path)
-    print(f"✅ QR code Wi-Fi generato con successo: {output_path}")
+    print(f"✅ QR Wi-Fi '{style}' generato con successo: {output_path}")
 
 
 if __name__ == "__main__":
-    print("=== Generatore QR Wi-Fi con logo (v1.4) ===")
+    print("=== Generatore QR Wi-Fi con logo (v1.6) ===")
     ssid = input("Inserisci SSID Wi-Fi: ")
     password = input("Inserisci password Wi-Fi: ")
+    print("\nScegli tipo QR:")
+    print("1 - Standard (massima compatibilità)")
+    print("2 - Artistico (puntinato, tipo Snapchat)")
+    choice = input("Scelta [1/2]: ").strip()
+
+    style = "artistico" if choice == "2" else "standard"
 
     try:
-        generate_wifi_qr(ssid, password)
+        generate_wifi_qr(ssid, password, style)
     except Exception as e:
         print(str(e))
         sys.exit(1)
