@@ -105,8 +105,8 @@ Thumbs.db
 # --- Output QR ---
 output/
 
-# --- Loghi o risorse non pubbliche ---
-logo/*
+# --- Claude Code config ---
 .claude
-template.*
+
 *.ico
+*.pdf
