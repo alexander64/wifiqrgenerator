@@ -107,3 +107,6 @@ output/
 
 # --- Loghi o risorse non pubbliche ---
 logo/*
+.claude
+template.*
+*.ico
