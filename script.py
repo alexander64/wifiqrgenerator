@@ -31,13 +31,128 @@ from dotenv import load_dotenv
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Prompt
 from rich.table import Table
 from rich.text import Text
 from rich import box
 from rich.padding import Padding
 
+import questionary
+from questionary import Style
+from prompt_toolkit.shortcuts import prompt
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.application import Application
+from prompt_toolkit.layout import Layout, HSplit, Window
+from prompt_toolkit.widgets import RadioList
+from prompt_toolkit.formatted_text import HTML
+
 console = Console()
+
+# Stile questionary per abbinarsi a Rich
+custom_style = Style([
+    ('qmark', 'fg:yellow bold'),
+    ('question', 'fg:white bold'),
+    ('answer', 'fg:green bold'),
+    ('pointer', 'fg:yellow bold'),
+    ('highlighted', 'fg:yellow bold'),
+    ('selected', 'fg:green'),
+    ('separator', 'fg:white'),
+    ('instruction', 'fg:white dim'),
+])
+
+
+def ask_yes_no(question: str, default: bool = False) -> bool:
+    """
+    Chiede Sì/No con navigazione frecce + shortcut nascosti s/y/n
+    SENZA numeri mostrati
+    """
+    from prompt_toolkit.formatted_text import FormattedText
+    from prompt_toolkit.shortcuts import radiolist_dialog
+    from prompt_toolkit.application import Application
+    from prompt_toolkit.key_binding import KeyBindings
+    from prompt_toolkit.layout.containers import HSplit, Window
+    from prompt_toolkit.layout.controls import FormattedTextControl
+    from prompt_toolkit.layout.layout import Layout
+    from prompt_toolkit.styles import Style as PTStyle
+
+    # Stato della selezione
+    class State:
+        selected = 1 if not default else 0  # 0=Sì, 1=No
+
+    # Key bindings
+    kb = KeyBindings()
+
+    @kb.add('up')
+    @kb.add('k')
+    def move_up(event):
+        State.selected = max(0, State.selected - 1)
+
+    @kb.add('down')
+    @kb.add('j')
+    def move_down(event):
+        State.selected = min(1, State.selected + 1)
+
+    @kb.add('enter')
+    def accept(event):
+        event.app.exit(result=State.selected == 0)
+
+    # Shortcut nascosti
+    @kb.add('s')
+    @kb.add('y')
+    def select_yes(event):
+        event.app.exit(result=True)
+
+    @kb.add('n')
+    def select_no(event):
+        event.app.exit(result=False)
+
+    @kb.add('c-c')  # Ctrl-C per uscire
+    def exit(event):
+        event.app.exit(result=False)
+
+    def get_text():
+        """Genera il testo formattato per il prompt"""
+        lines = [('class:question', f'>> {question}\n')]
+
+        # Opzione Sì
+        if State.selected == 0:
+            lines.append(('class:selected', '  → Sì\n'))
+        else:
+            lines.append(('', '    Sì\n'))
+
+        # Opzione No
+        if State.selected == 1:
+            lines.append(('class:selected', '  → No\n'))
+        else:
+            lines.append(('', '    No\n'))
+
+        return FormattedText(lines)
+
+    # Layout
+    text_window = Window(
+        content=FormattedTextControl(get_text),
+        dont_extend_height=True
+    )
+
+    root_container = HSplit([text_window])
+    layout = Layout(root_container)
+
+    # Stile
+    style = PTStyle.from_dict({
+        'question': '#ffffff bold',
+        'selected': '#ffff00 bold',
+    })
+
+    # App
+    app = Application(
+        layout=layout,
+        key_bindings=kb,
+        style=style,
+        full_screen=False,
+        mouse_support=False,
+    )
+
+    return app.run()
 
 
 # ---------------------------
@@ -347,69 +462,6 @@ def fill_pdf(template_path: str, out_pdf_path: str, ssid: str, password: str, qr
 #  MAIN
 # ---------------------------
 
-def show_menu(has_env_ssid: bool = False, has_env_password: bool = False, current_ssid: str = None):
-    """Mostra il menu principale con opzioni di override se necessario."""
-    from rich.align import Align
-
-    menu = Table(show_header=False, box=box.HEAVY_HEAD, border_style="white", padding=(0, 3))
-    menu.add_column("Tasto", style="bold white", justify="center", width=6)
-    menu.add_column("Opzione", style="white bold", width=32)
-    menu.add_column("Descrizione", style="dim", width=38)
-
-    menu.add_row("1", "[1] QR Standard", "QR code classico con moduli quadrati")
-    menu.add_row("2", "[2] QR Artistico", "QR code con moduli circolari e gradiente")
-
-    # Mostra opzioni override solo se ci sono env da cambiare
-    if has_env_ssid or has_env_password:
-        menu.add_row("", "", "")
-
-    if has_env_ssid:
-        ssid_display = current_ssid[:20] + "..." if len(current_ssid) > 20 else current_ssid
-        menu.add_row("s", "[s] Cambia SSID", f"Attuale: {ssid_display} (da .env)")
-
-    if has_env_password:
-        menu.add_row("p", "[p] Cambia Password", "Cambia password da .env")
-
-    menu.add_row("", "", "")
-    menu.add_row("0", "[0] Esci", "Termina normalmente")
-    menu.add_row("q", "[q] Esci e pulisci", "Termina e cancella variabili env")
-
-    console.print(Align.center(Panel(menu, title="[bold white]>> Menu Principale <<", border_style="white")))
-    console.print()
-
-
-def get_wifi_config():
-    """Ottiene configurazione WiFi da .env o input utente."""
-    from rich.align import Align
-
-    ssid = os.getenv("WIFI_SSID")
-    password = os.getenv("WIFI_PASSWORD")
-
-    # Se abbiamo tutto da .env, mostriamo e confermiamo
-    if ssid and password:
-        config_panel = Table(show_header=False, box=box.ROUNDED, border_style="green", padding=(0, 2))
-        config_panel.add_column("Campo", style="green bold", width=15)
-        config_panel.add_column("Valore", style="white", width=40)
-        config_panel.add_row("SSID", ssid)
-        config_panel.add_row("Password", "*" * len(password))
-
-        console.print(Align.center(Panel(config_panel, title="[green bold]Configurazione da .env", border_style="green")))
-        console.print()
-
-        if not Confirm.ask("[yellow]Usare questa configurazione?[/yellow]", default=True):
-            ssid = None
-            password = None
-
-    # Chiedi i dati mancanti
-    if not ssid:
-        console.print(Align.center(Text("Inserisci i dati della rete WiFi", style="bold white")))
-        console.print()
-        ssid = Prompt.ask("[white]SSID (nome rete)[/white]").strip()
-
-    if not password:
-        password = Prompt.ask("[white]Password WiFi[/white]", password=True).strip()
-
-    return ssid, password
 
 
 def clean_env_vars():
@@ -440,62 +492,67 @@ if __name__ == "__main__":
     # Mostra header con logo convertito in ASCII art
     show_header(logo_path)
 
-    # Ottieni configurazione WiFi
-    ssid, password = get_wifi_config()
+    # Carica SSID e Password da .env (o None)
+    ssid = os.getenv("WIFI_SSID")
+    password = os.getenv("WIFI_PASSWORD")
 
-    # Traccia se vengono da env per mostrare opzioni override
-    has_env_ssid = os.getenv("WIFI_SSID") is not None
-    has_env_password = os.getenv("WIFI_PASSWORD") is not None
+    # Traccia cosa viene da env per mostrare opzioni override
+    has_env_ssid = ssid is not None
+    has_env_password = password is not None
+
+    console.print()
+
+    # Chiedi SSID con default se da env
+    if has_env_ssid:
+        new_ssid = Prompt.ask(f"[white]SSID[/white]", default=ssid).strip()
+        if new_ssid != ssid:
+            ssid = new_ssid
+            os.environ["WIFI_SSID"] = new_ssid
+    else:
+        ssid = Prompt.ask("[white]SSID (nome rete)[/white]").strip()
+
+    # Chiedi Password con possibilità di override se da env
+    if has_env_password:
+        console.print(f"[dim white]Password attuale: {password} (da .env)[/dim white]")
+        new_password = Prompt.ask("[white]Password[/white] [dim](invio per mantenere)[/dim]", default="").strip()
+        if new_password:
+            password = new_password
+            os.environ["WIFI_PASSWORD"] = new_password
+    else:
+        password = Prompt.ask("[white]Password WiFi[/white]").strip()
 
     console.print()
 
     # Mostra menu e ottieni scelta
     while True:
-        show_menu(has_env_ssid, has_env_password, ssid)
-
-        # Costruisci choices dinamicamente
-        valid_choices = ["0", "1", "2", "q"]
-        if has_env_ssid:
-            valid_choices.append("s")
-        if has_env_password:
-            valid_choices.append("p")
-
-        choice = Prompt.ask("[bold white]Scegli un'opzione[/bold white]", choices=valid_choices, default="1")
+        choice = questionary.select(
+            "Cosa vuoi fare?",
+            choices=[
+                questionary.Choice("QR Standard - QR code classico con moduli quadrati", value="standard"),
+                questionary.Choice("QR Artistico - QR code con moduli circolari e gradiente", value="artistico"),
+                questionary.Separator(),
+                questionary.Choice("Esci", value="exit"),
+                questionary.Choice("Esci e pulisci variabili env", value="exit_clean"),
+            ],
+            style=custom_style,
+            qmark=">>",
+            pointer="→"
+        ).ask()
 
         # Gestione uscita
-        if choice == "0":
+        if choice == "exit":
             console.print("\n[yellow]Arrivederci![/yellow]\n")
             sys.exit(0)
 
         # Gestione uscita con pulizia env
-        if choice == "q":
+        if choice == "exit_clean":
             clean_env_vars()
             console.print("\n[yellow]Variabili env pulite. Arrivederci![/yellow]\n")
             sys.exit(0)
 
-        # Gestione override SSID
-        if choice == "s":
-            console.print()
-            new_ssid = Prompt.ask("[white]Nuovo SSID[/white]").strip()
-            if new_ssid:
-                ssid = new_ssid
-                os.environ["WIFI_SSID"] = new_ssid
-                console.print(f"[green]SSID aggiornato: {ssid}[/green]\n")
-            continue
-
-        # Gestione override Password
-        if choice == "p":
-            console.print()
-            new_password = Prompt.ask("[white]Nuova Password[/white]", password=True).strip()
-            if new_password:
-                password = new_password
-                os.environ["WIFI_PASSWORD"] = new_password
-                console.print("[green]Password aggiornata![/green]\n")
-            continue
-
         # Determina stile QR
-        style = "standard" if choice == "1" else "artistico"
-        style_name = "Standard" if choice == "1" else "Artistico"
+        style = choice
+        style_name = "Standard" if choice == "standard" else "Artistico"
 
         # Output directory
         out_root = os.path.join(base_dir, "output")
@@ -512,8 +569,8 @@ if __name__ == "__main__":
 
         console.print(f"[green bold][OK][/green bold] QR Code generato: [white]{qr_png_path}[/white]\n")
 
-        # Chiedi PDF
-        make_pdf = Confirm.ask("[bold white]Generare anche il PDF compilato?[/bold white]", default=False)
+        # Chiedi PDF - usa frecce + shortcut nascosti
+        make_pdf = ask_yes_no("Generare anche il PDF compilato?", default=False)
 
         if make_pdf:
             if not os.path.exists(template_pdf):
@@ -540,7 +597,7 @@ if __name__ == "__main__":
         console.print(Align.center(Panel(summary, title="[green bold]>> COMPLETATO <<", border_style="green")))
         console.print()
 
-        # Chiedi se continuare
-        if not Confirm.ask("[yellow]Generare un altro QR code?[/yellow]", default=False):
+        # Chiedi se continuare - usa frecce + shortcut nascosti
+        if not ask_yes_no("Generare un altro QR code?", default=False):
             console.print("\n[yellow]Arrivederci![/yellow]\n")
             break

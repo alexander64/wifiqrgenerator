@@ -3,3 +3,4 @@ Pillow
 PyMuPDF
 python-dotenv
 rich
+questionary
