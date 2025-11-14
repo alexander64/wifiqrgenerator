@@ -4,11 +4,20 @@ Generatore automatico di QR code WiFi con logo personalizzato e sistema intellig
 
 ## Caratteristiche
 
+- **Interfaccia CLI moderna e intuitiva**:
+  - Logo mostrato come ASCII art generato automaticamente
+  - Navigazione con frecce nei menu invece di numeri
+  - Shortcut nascosti per velocizzare le operazioni (s/y/n)
+  - Feedback visivo con spinner, icone e colori coordinati
 - **Generazione QR Code WiFi**: Crea QR code nel formato standard compatibile con Android e iOS
 - **Due stili grafici**:
   - **Standard**: QR code classico nero su bianco
   - **Artistico**: QR code puntinato con gradiente radiale per un aspetto più professionale
 - **Logo personalizzato**: Inserisce automaticamente il tuo logo al centro del QR (20% della dimensione)
+- **Configurazione flessibile**:
+  - Supporto file `.env` per credenziali WiFi predefinite
+  - Override intelligente con valori di default modificabili
+  - Password visibili per facilitare l'inserimento
 - **Compilazione PDF intelligente**:
   - Cerca automaticamente i valori esistenti nel template PDF
   - Sostituisce solo SSID, password e QR code
@@ -41,6 +50,7 @@ wifiqrcodegenerator/
   - `PyMuPDF`: Lettura e modifica PDF
   - `python-dotenv`: Caricamento configurazione da file .env
   - `rich`: Interfaccia CLI elegante e professionale
+  - `questionary`: Navigazione con frecce nei menu interattivi
 
 ## Installazione
 
@@ -80,12 +90,13 @@ python script.py
 
 Lo script ti chiederà:
 
-1. **SSID Wi-Fi**: Il nome della tua rete wireless (se non specificato in `.env`)
-2. **Password Wi-Fi**: La password della rete (se non specificata in `.env`)
-3. **Tipo QR**:
-   - `1` per QR standard (quadrati neri)
-   - `2` per QR artistico (puntinato con gradiente)
-4. **Generare PDF**: `s` per generare anche il PDF compilato, `n` per solo QR
+1. **SSID Wi-Fi**: Il nome della tua rete wireless (se non specificato in `.env`, altrimenti puoi premere Invio per mantenere)
+2. **Password Wi-Fi**: La password della rete (se non specificata in `.env`, altrimenti puoi premere Invio per mantenere)
+3. **Tipo QR**: Usa le frecce ↑↓ per navigare tra:
+   - QR Standard (quadrati neri)
+   - QR Artistico (puntinato con gradiente)
+   - Esci / Esci e pulisci env
+4. **Generare PDF**: Usa le frecce ↑↓ per scegliere Sì/No (o premi s/y per Sì, n per No)
 
 ### Metodo 2: Configurazione con file .env
 
@@ -111,62 +122,60 @@ Per evitare di inserire SSID e password ogni volta:
 
 **v2.4 - Interfaccia Rich (senza .env):**
 ```
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║                    WiFi QR Code Generator                     ║
-║                           v2.4                                ║
-║                                                               ║
-║              Genera QR Code WiFi professionali                ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
+                    #%%%%%@@@@@@#%%%%#@@
+                    %%%%%%@@@@@@@#%%%%%@
+                    %%%%%%@@@@@@@@%%%%%#
+                    %%%%%%@@@@@@@@%%%%%#
+                    %%%%%%@@@@@@@@%%%%%#
 
-   Logo personalizzato:  logo.ico
+                 WiFi QR Code Generator v2.4
+        ---------------------------------------------
 
-╭─ Configurazione Rete WiFi ─╮
-│                             │
-╰─────────────────────────────╯
-SSID WiFi: MiaRete
-Password WiFi: ********
+SSID (nome rete): MiaRete
+Password WiFi: password123
 
-╭─ Seleziona Stile QR Code ─────────────────────────────────────╮
-│  Opzione    Tipo QR      Descrizione                          │
-│  ────────────────────────────────────────────────────────────  │
-│     1       Standard     QR code classico con moduli quadrati │
-│     2       Artistico    QR code con moduli circolari e...    │
-╰────────────────────────────────────────────────────────────────╯
-Scelta [1/2]: 2
+>> Cosa vuoi fare?
+  → QR Standard - QR code classico con moduli quadrati
+    QR Artistico - QR code con moduli circolari e gradiente
 
-⠋ Generazione QR code (artistico)...
-✓ QR Code generato: output\2025-11-14_19-30-45\wifi_qr.png
+    Esci
+    Esci e pulisci variabili env
 
-Generare anche il PDF compilato? [y/n]: y
-⠋ Compilazione PDF...
-✓ PDF compilato: output\2025-11-14_19-30-45\wifi_compilato.pdf
+>> Generazione QR code standard...
+[OK] QR Code generato: output\2025-11-14_20-30-15\wifi_qr.png
 
-╭─ ✓ Completato ─────────────────────────────────────────────╮
-│  SSID:       MiaRete                                       │
-│  Stile QR:   Artistico                                     │
-│  Output:     output\2025-11-14_19-30-45                    │
-╰────────────────────────────────────────────────────────────╯
+>> Generare anche il PDF compilato?
+    Sì
+  → No
+
+╭─────────── >> COMPLETATO << ────────────╮
+│  SSID:       MiaRete                    │
+│  Stile:      Standard                   │
+│  Output:     output\2025-11-14_20-30-15 │
+╰─────────────────────────────────────────╯
 ```
 
 **v2.4 - Con .env configurato:**
 ```
-╔═══════════════════════════════════════════════════════════════╗
-║                    WiFi QR Code Generator                     ║
-║                           v2.4                                ║
-║              Genera QR Code WiFi professionali                ║
-╚═══════════════════════════════════════════════════════════════╝
+                    #%%%%%@@@@@@#%%%%#@@
+                    %%%%%%@@@@@@@#%%%%%@
+                    %%%%%%@@@@@@@@%%%%%#
 
-   Logo personalizzato:  logo.ico
+                 WiFi QR Code Generator v2.4
+        ---------------------------------------------
 
-╭─ Configurazione ───────────────────────────────────────────╮
-│  SSID WiFi:    MiaRete (da .env)                           │
-│  Password:     •••••••••••• (da .env)                      │
-╰────────────────────────────────────────────────────────────╯
+SSID [MiaRete]: ← premi Invio per mantenere o scrivi nuovo
+Password attuale: password123 (da .env)
+Password (invio per mantenere): ← premi Invio o scrivi nuova
 
-[...continua come sopra...]
+>> Cosa vuoi fare? ← usa frecce ↑↓ o Esc per uscire
 ```
+
+**Controlli:**
+- **Menu principale**: Usa frecce ↑↓ per navigare, Invio per confermare
+- **Domande Sì/No**: Usa frecce ↑↓ per navigare o premi s/y per Sì, n per No
+- **Input testo**: Scrivi normalmente, Invio per confermare
+- **Override .env**: Se SSID/Password in .env, premi Invio per mantenere o scrivi nuovo valore
 
 ## Come Funziona
 
@@ -260,15 +269,19 @@ Il sistema è progettato per funzionare con qualsiasi template PDF che contiene:
 **v2.4** - Ultima versione stabile
 
 Novità v2.4:
-- **NUOVA FUNZIONALITÀ**: Interfaccia CLI elegante e professionale con Rich
-  - Header stilizzato con bordi eleganti
-  - Tabelle formattate per selezione tipo QR
+- **NUOVA FUNZIONALITÀ**: Interfaccia CLI completamente rinnovata con Rich e Questionary
+  - **Logo ASCII art automatico**: Il logo viene convertito automaticamente in ASCII art e mostrato nell'header
+  - **Estrazione colore dominante**: Il colore del logo viene rilevato e applicato all'ASCII art
+  - **Navigazione a frecce**: Menu principale navigabile con frecce ↑↓ invece di numeri
+  - **Prompt Sì/No personalizzati**: Navigazione con frecce + shortcut nascosti (s/y per Sì, n per No)
+  - **Password visibile**: La password WiFi non è più mascherata per facilitare l'inserimento
+  - **Override .env intelligente**: Se SSID/Password sono nel .env, mostrati come default modificabili
   - Spinner animati durante generazione
   - Messaggi di successo/errore colorati con icone (✓/✗)
   - Riepilogo finale in pannello colorato
-  - Rilevamento e visualizzazione logo nell'header
+- Aggiunta dipendenza `questionary` per navigazione con frecce
 - Aggiunta dipendenza `rich` per interfaccia CLI avanzata
-- Esperienza utente notevolmente migliorata con feedback visivo chiaro
+- Esperienza utente completamente ripensata per massima usabilità
 
 Novità v2.3:
 - **NUOVA FUNZIONALITÀ**: Supporto file `.env` per configurare SSID e password
