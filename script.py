@@ -26,6 +26,7 @@ from qrcode.image.styles.colormasks import RadialGradiantColorMask
 from PIL import Image
 
 import fitz  # PyMuPDF
+from dotenv import load_dotenv
 
 
 # ---------------------------
@@ -221,8 +222,23 @@ def fill_pdf(template_path: str, out_pdf_path: str, ssid: str, password: str, qr
 
 if __name__ == "__main__":
     print("=== Generatore QR + compilatore PDF (v2.3) ===")
-    ssid = input("SSID Wi-Fi: ").strip()
-    password = input("Password Wi-Fi: ").strip()
+
+    # Carica variabili da .env se presente
+    load_dotenv()
+
+    # Leggi SSID da .env se specificato, altrimenti chiedi
+    ssid = os.getenv("WIFI_SSID")
+    if ssid:
+        print(f"SSID Wi-Fi: {ssid} (da .env)")
+    else:
+        ssid = input("SSID Wi-Fi: ").strip()
+
+    # Leggi Password da .env se specificato, altrimenti chiedi
+    password = os.getenv("WIFI_PASSWORD")
+    if password:
+        print(f"Password Wi-Fi: {'*' * len(password)} (da .env)")
+    else:
+        password = input("Password Wi-Fi: ").strip()
 
     print("\nTipo QR:")
     print("1 - Standard")

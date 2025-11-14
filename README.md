@@ -39,6 +39,7 @@ wifiqrcodegenerator/
   - `qrcode[pil]`: Generazione QR code con supporto immagini
   - `Pillow`: Manipolazione e composizione immagini
   - `PyMuPDF`: Lettura e modifica PDF
+  - `python-dotenv`: Caricamento configurazione da file .env
 
 ## Installazione
 
@@ -61,7 +62,14 @@ pip install -r requirements.txt
    - Inserisci il tuo logo in `static/logo/` (solo un file, .png o .ico)
    - Se vuoi usare la funzione PDF, inserisci il template in `static/template.pdf`
 
+5. (Opzionale) Configura le credenziali WiFi:
+   - Copia `.env.example` in `.env`
+   - Inserisci SSID e/o password nel file `.env`
+   - Se configurati, non verranno chiesti durante l'esecuzione
+
 ## Utilizzo
+
+### Metodo 1: Esecuzione interattiva
 
 Esegui lo script:
 
@@ -71,17 +79,38 @@ python script.py
 
 Lo script ti chiederà:
 
-1. **SSID Wi-Fi**: Il nome della tua rete wireless
-2. **Password Wi-Fi**: La password della rete
+1. **SSID Wi-Fi**: Il nome della tua rete wireless (se non specificato in `.env`)
+2. **Password Wi-Fi**: La password della rete (se non specificata in `.env`)
 3. **Tipo QR**:
    - `1` per QR standard (quadrati neri)
    - `2` per QR artistico (puntinato con gradiente)
 4. **Generare PDF**: `s` per generare anche il PDF compilato, `n` per solo QR
 
+### Metodo 2: Configurazione con file .env
+
+Per evitare di inserire SSID e password ogni volta:
+
+1. Copia il file `.env.example` in `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Modifica `.env` e inserisci le tue credenziali:
+   ```
+   WIFI_SSID=NomeRete
+   WIFI_PASSWORD=PasswordRete
+   ```
+
+3. Esegui lo script - SSID e password verranno letti dal file `.env`:
+   ```bash
+   python script.py
+   ```
+
 ### Esempio di Sessione
 
+**Senza .env (chiede tutto):**
 ```
-=== Generatore QR + compilatore PDF (v2.1) ===
+=== Generatore QR + compilatore PDF (v2.3) ===
 SSID Wi-Fi: MiaRete
 Password Wi-Fi: Password123!
 
@@ -90,9 +119,26 @@ Tipo QR:
 2 - Artistico (puntinato)
 Scelta [1/2]: 2
 
-QR generato: C:\scripts\wifiqrcodegenerator\output\2025-10-31_15-30-45\wifi_qr.png
+QR generato: output/2025-10-31_15-30-45/wifi_qr.png
 Generare anche il PDF compilato? [s/n]: s
-PDF compilato: C:\scripts\wifiqrcodegenerator\output\2025-10-31_15-30-45\wifi_compilato.pdf
+PDF compilato: output/2025-10-31_15-30-45/wifi_compilato.pdf
+Fine.
+```
+
+**Con .env configurato (legge da file):**
+```
+=== Generatore QR + compilatore PDF (v2.3) ===
+SSID Wi-Fi: MiaRete (da .env)
+Password Wi-Fi: ************ (da .env)
+
+Tipo QR:
+1 - Standard
+2 - Artistico (puntinato)
+Scelta [1/2]: 2
+
+QR generato: output/2025-10-31_15-30-45/wifi_qr.png
+Generare anche il PDF compilato? [s/n]: s
+PDF compilato: output/2025-10-31_15-30-45/wifi_compilato.pdf
 Fine.
 ```
 
@@ -188,10 +234,15 @@ Il sistema è progettato per funzionare con qualsiasi template PDF che contiene:
 **v2.3** - Ultima versione stabile
 
 Novità v2.3:
+- **NUOVA FUNZIONALITÀ**: Supporto file `.env` per configurare SSID e password
+  - Se specificate nel `.env`, non vengono chieste durante l'esecuzione
+  - File `.env.example` fornito come template
+  - La password viene mascherata nell'output per sicurezza
 - **MIGLIORAMENTO**: SSID e password ora sono **perfettamente centrati** nella colonna destra della tabella
 - **MIGLIORAMENTO**: QR code più grande (145x145 punti invece di 128x128)
 - Usa `fitz.get_text_length()` per calcolare la larghezza esatta del testo e centrarlo con precisione assoluta
 - Pulisce tutta la cella della tabella (non solo il vecchio valore) per evitare sovrapposizioni
+- Aggiunta dipendenza `python-dotenv` per gestione file .env
 
 Miglioramenti v2.2 (rispetto alla v2.1):
 - **FIX**: Posizionamento corretto di SSID e password nel template PDF
