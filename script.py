@@ -476,8 +476,8 @@ if __name__ == "__main__":
     console.clear()
     load_dotenv()
 
-    # Setup percorsi
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # Setup percorsi - usa directory corrente per compatibilità con exe PyInstaller
+    base_dir = os.getcwd()
     static_dir = os.path.join(base_dir, "static")
     logo_dir = os.path.join(static_dir, "logo")
     template_pdf = os.path.join(static_dir, "template.pdf")
