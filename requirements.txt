@@ -2,3 +2,4 @@ qrcode[pil]
 Pillow
 PyMuPDF
 python-dotenv
+rich

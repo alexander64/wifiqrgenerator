@@ -1,5 +1,5 @@
 # =====================================
-# Versione: 2.3
+# Versione: 2.4
 # Script: wifi_qr_with_logo.py
 # Descrizione:
 #   - Genera QR Wi-Fi (standard o puntinato) con logo (SENZA ombra).
@@ -7,6 +7,7 @@
 #   - Cerca i valori esistenti nel template PDF per sovrascriverli nelle posizioni corrette.
 #   - SSID e password CENTRATI nella colonna destra della tabella.
 #   - QR più grande (145x145 punti).
+#   - Interfaccia CLI elegante con Rich.
 #   Struttura:
 #       static/
 #           logo/logo.png (o .ico)   ← un solo file
@@ -28,10 +29,48 @@ from PIL import Image
 import fitz  # PyMuPDF
 from dotenv import load_dotenv
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Prompt, Confirm
+from rich.table import Table
+from rich.text import Text
+from rich import box
+from rich.padding import Padding
+
+console = Console()
+
 
 # ---------------------------
 #  UTIL
 # ---------------------------
+
+def show_header(logo_path: str = None):
+    """Mostra l'header professionale dell'applicazione."""
+    # Crea header elegante
+    title_text = Text("\n  WiFi QR Code Generator  \n", style="bold cyan", justify="center")
+    title_text.append("         v2.4         \n\n", style="yellow")
+    title_text.append("  Genera QR Code WiFi professionali  ", style="dim italic")
+
+    header_panel = Panel(
+        title_text,
+        box=box.DOUBLE,
+        border_style="bright_cyan",
+        padding=(1, 2)
+    )
+
+    console.print(header_panel)
+    console.print()
+
+    # Se c'è un logo, mostra un messaggio
+    if logo_path and os.path.exists(logo_path):
+        logo_name = os.path.basename(logo_path)
+        logo_info = Table(show_header=False, box=None, padding=(0, 1))
+        logo_info.add_column(style="dim")
+        logo_info.add_column(style="cyan")
+        logo_info.add_row("Logo personalizzato:", logo_name)
+        console.print(Padding(logo_info, (0, 2)))
+        console.print()
+
 
 def ensure_single_logo(logo_dir: str) -> str:
     if not os.path.isdir(logo_dir):
@@ -221,34 +260,67 @@ def fill_pdf(template_path: str, out_pdf_path: str, ssid: str, password: str, qr
 # ---------------------------
 
 if __name__ == "__main__":
-    print("=== Generatore QR + compilatore PDF (v2.3) ===")
+    console.clear()
 
     # Carica variabili da .env se presente
     load_dotenv()
 
+    # Carica logo per mostrarlo nell'header
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    static_dir = os.path.join(base_dir, "static")
+    logo_dir = os.path.join(static_dir, "logo")
+
+    try:
+        logo_path = ensure_single_logo(logo_dir)
+    except Exception:
+        logo_path = None
+
+    # Mostra header elegante con logo
+    show_header(logo_path)
+
+    # Mostra pannello configurazione
+    config_table = Table(show_header=False, box=None, padding=(0, 1))
+    config_table.add_column(style="cyan bold", width=15)
+    config_table.add_column(style="white")
+
     # Leggi SSID da .env se specificato, altrimenti chiedi
     ssid = os.getenv("WIFI_SSID")
     if ssid:
-        print(f"SSID Wi-Fi: {ssid} (da .env)")
+        config_table.add_row("SSID WiFi:", f"{ssid} [dim](da .env)[/dim]")
     else:
-        ssid = input("SSID Wi-Fi: ").strip()
+        console.print(Panel("Configurazione Rete WiFi", border_style="cyan", box=box.ROUNDED))
+        ssid = Prompt.ask("[cyan bold]SSID WiFi[/cyan bold]").strip()
 
     # Leggi Password da .env se specificato, altrimenti chiedi
     password = os.getenv("WIFI_PASSWORD")
     if password:
-        print(f"Password Wi-Fi: {'*' * len(password)} (da .env)")
+        config_table.add_row("Password:", f"{'•' * len(password)} [dim](da .env)[/dim]")
     else:
-        password = input("Password Wi-Fi: ").strip()
+        password = Prompt.ask("[cyan bold]Password WiFi[/cyan bold]", password=True).strip()
 
-    print("\nTipo QR:")
-    print("1 - Standard")
-    print("2 - Artistico (puntinato)")
-    style = "artistico" if input("Scelta [1/2]: ").strip() == "2" else "standard"
+    # Mostra configurazione se caricata da .env
+    if os.getenv("WIFI_SSID") or os.getenv("WIFI_PASSWORD"):
+        console.print(Panel(config_table, title="Configurazione", border_style="green", box=box.ROUNDED))
+        console.print()
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    static_dir = os.path.join(base_dir, "static")
-    logo_dir = os.path.join(static_dir, "logo")
+    # Selezione tipo QR con tabella
+    qr_table = Table(show_header=True, box=box.SIMPLE, padding=(0, 2))
+    qr_table.add_column("Opzione", style="cyan bold", justify="center")
+    qr_table.add_column("Tipo QR", style="white")
+    qr_table.add_column("Descrizione", style="dim")
+    qr_table.add_row("1", "Standard", "QR code classico con moduli quadrati")
+    qr_table.add_row("2", "Artistico", "QR code con moduli circolari e gradiente")
+
+    console.print(Panel(qr_table, title="Seleziona Stile QR Code", border_style="cyan", box=box.ROUNDED))
+    style_choice = Prompt.ask("[cyan bold]Scelta[/cyan bold]", choices=["1", "2"], default="1")
+    style = "artistico" if style_choice == "2" else "standard"
+
     template_pdf = os.path.join(static_dir, "template.pdf")
+
+    # Verifica che il logo sia stato caricato correttamente
+    if not logo_path:
+        console.print(f"[red bold]✗[/red bold] Errore: Logo non trovato in {logo_dir}")
+        sys.exit(1)
 
     # output datato
     out_root = os.path.join(base_dir, "output")
@@ -256,27 +328,43 @@ if __name__ == "__main__":
     out_dir = os.path.join(out_root, ts)
     os.makedirs(out_dir, exist_ok=True)
 
-    # logo
-    logo_path = ensure_single_logo(logo_dir)
-
     # genera QR e salva PNG
-    qr_img = generate_qr_image(ssid, password, style, logo_path)
-    qr_png_path = os.path.join(out_dir, "wifi_qr.png")
-    qr_img.convert("RGB").save(qr_png_path, "PNG")
-    print(f"QR generato: {qr_png_path}")
+    console.print()
+    with console.status(f"[cyan bold]Generazione QR code ({style})...[/cyan bold]", spinner="dots"):
+        qr_img = generate_qr_image(ssid, password, style, logo_path)
+        qr_png_path = os.path.join(out_dir, "wifi_qr.png")
+        qr_img.convert("RGB").save(qr_png_path, "PNG")
+
+    console.print(f"[green bold]✓[/green bold] QR Code generato: [cyan]{qr_png_path}[/cyan]")
 
     # chiedi se creare PDF
-    make_pdf = input("Generare anche il PDF compilato? [s/n]: ").strip().lower() == "s"
+    console.print()
+    make_pdf = Confirm.ask("[cyan bold]Generare anche il PDF compilato?[/cyan bold]", default=False)
+
     if make_pdf:
         if not os.path.exists(template_pdf):
-            print(f"Template PDF non trovato: {template_pdf}")
-            sys.exit(1)
-        out_pdf = os.path.join(out_dir, "wifi_compilato.pdf")
-        try:
-            fill_pdf(template_pdf, out_pdf, ssid, password, qr_img.convert("RGB"))
-            print(f"PDF compilato: {out_pdf}")
-        except Exception as e:
-            print(f"Errore compilazione PDF: {e}")
+            console.print(f"[red bold]✗[/red bold] Template PDF non trovato: {template_pdf}")
             sys.exit(1)
 
-    print("Fine.")
+        out_pdf = os.path.join(out_dir, "wifi_compilato.pdf")
+
+        with console.status("[cyan bold]Compilazione PDF...[/cyan bold]", spinner="dots"):
+            try:
+                fill_pdf(template_pdf, out_pdf, ssid, password, qr_img.convert("RGB"))
+            except Exception as e:
+                console.print(f"[red bold]✗[/red bold] Errore compilazione PDF: {e}")
+                sys.exit(1)
+
+        console.print(f"[green bold]✓[/green bold] PDF compilato: [cyan]{out_pdf}[/cyan]")
+
+    # Riepilogo finale
+    console.print()
+    summary = Table(show_header=False, box=box.ROUNDED, border_style="green", padding=(0, 2))
+    summary.add_column(style="green bold", width=12)
+    summary.add_column(style="white")
+    summary.add_row("SSID:", ssid)
+    summary.add_row("Stile QR:", style.capitalize())
+    summary.add_row("Output:", out_dir)
+
+    console.print(Panel(summary, title="[green bold]✓ Completato[/green bold]", border_style="green"))
+    console.print()

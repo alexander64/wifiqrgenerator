@@ -40,6 +40,7 @@ wifiqrcodegenerator/
   - `Pillow`: Manipolazione e composizione immagini
   - `PyMuPDF`: Lettura e modifica PDF
   - `python-dotenv`: Caricamento configurazione da file .env
+  - `rich`: Interfaccia CLI elegante e professionale
 
 ## Installazione
 
@@ -108,38 +109,63 @@ Per evitare di inserire SSID e password ogni volta:
 
 ### Esempio di Sessione
 
-**Senza .env (chiede tutto):**
+**v2.4 - Interfaccia Rich (senza .env):**
 ```
-=== Generatore QR + compilatore PDF (v2.3) ===
-SSID Wi-Fi: MiaRete
-Password Wi-Fi: Password123!
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║                    WiFi QR Code Generator                     ║
+║                           v2.4                                ║
+║                                                               ║
+║              Genera QR Code WiFi professionali                ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
 
-Tipo QR:
-1 - Standard
-2 - Artistico (puntinato)
+   Logo personalizzato:  logo.ico
+
+╭─ Configurazione Rete WiFi ─╮
+│                             │
+╰─────────────────────────────╯
+SSID WiFi: MiaRete
+Password WiFi: ********
+
+╭─ Seleziona Stile QR Code ─────────────────────────────────────╮
+│  Opzione    Tipo QR      Descrizione                          │
+│  ────────────────────────────────────────────────────────────  │
+│     1       Standard     QR code classico con moduli quadrati │
+│     2       Artistico    QR code con moduli circolari e...    │
+╰────────────────────────────────────────────────────────────────╯
 Scelta [1/2]: 2
 
-QR generato: output/2025-10-31_15-30-45/wifi_qr.png
-Generare anche il PDF compilato? [s/n]: s
-PDF compilato: output/2025-10-31_15-30-45/wifi_compilato.pdf
-Fine.
+⠋ Generazione QR code (artistico)...
+✓ QR Code generato: output\2025-11-14_19-30-45\wifi_qr.png
+
+Generare anche il PDF compilato? [y/n]: y
+⠋ Compilazione PDF...
+✓ PDF compilato: output\2025-11-14_19-30-45\wifi_compilato.pdf
+
+╭─ ✓ Completato ─────────────────────────────────────────────╮
+│  SSID:       MiaRete                                       │
+│  Stile QR:   Artistico                                     │
+│  Output:     output\2025-11-14_19-30-45                    │
+╰────────────────────────────────────────────────────────────╯
 ```
 
-**Con .env configurato (legge da file):**
+**v2.4 - Con .env configurato:**
 ```
-=== Generatore QR + compilatore PDF (v2.3) ===
-SSID Wi-Fi: MiaRete (da .env)
-Password Wi-Fi: ************ (da .env)
+╔═══════════════════════════════════════════════════════════════╗
+║                    WiFi QR Code Generator                     ║
+║                           v2.4                                ║
+║              Genera QR Code WiFi professionali                ║
+╚═══════════════════════════════════════════════════════════════╝
 
-Tipo QR:
-1 - Standard
-2 - Artistico (puntinato)
-Scelta [1/2]: 2
+   Logo personalizzato:  logo.ico
 
-QR generato: output/2025-10-31_15-30-45/wifi_qr.png
-Generare anche il PDF compilato? [s/n]: s
-PDF compilato: output/2025-10-31_15-30-45/wifi_compilato.pdf
-Fine.
+╭─ Configurazione ───────────────────────────────────────────╮
+│  SSID WiFi:    MiaRete (da .env)                           │
+│  Password:     •••••••••••• (da .env)                      │
+╰────────────────────────────────────────────────────────────╯
+
+[...continua come sopra...]
 ```
 
 ## Come Funziona
@@ -231,7 +257,18 @@ Il sistema è progettato per funzionare con qualsiasi template PDF che contiene:
 
 ## Versione
 
-**v2.3** - Ultima versione stabile
+**v2.4** - Ultima versione stabile
+
+Novità v2.4:
+- **NUOVA FUNZIONALITÀ**: Interfaccia CLI elegante e professionale con Rich
+  - Header stilizzato con bordi eleganti
+  - Tabelle formattate per selezione tipo QR
+  - Spinner animati durante generazione
+  - Messaggi di successo/errore colorati con icone (✓/✗)
+  - Riepilogo finale in pannello colorato
+  - Rilevamento e visualizzazione logo nell'header
+- Aggiunta dipendenza `rich` per interfaccia CLI avanzata
+- Esperienza utente notevolmente migliorata con feedback visivo chiaro
 
 Novità v2.3:
 - **NUOVA FUNZIONALITÀ**: Supporto file `.env` per configurare SSID e password
