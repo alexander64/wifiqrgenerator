@@ -44,32 +44,120 @@ console = Console()
 #  UTIL
 # ---------------------------
 
+def get_dominant_color(image_path: str) -> str:
+    """Estrae il colore dominante dal logo per usarlo nell'ASCII art."""
+    try:
+        img = Image.open(image_path)
+        img = img.convert("RGB")
+        img = img.resize((50, 50))  # Ridimensiona per velocità
+
+        pixels = img.getdata()
+        pixel_count = {}
+
+        for pixel in pixels:
+            # Ignora pixel troppo chiari (bianchi/trasparenti)
+            if sum(pixel) < 700:  # Non bianco
+                pixel_count[pixel] = pixel_count.get(pixel, 0) + 1
+
+        if not pixel_count:
+            return "bright_white"
+
+        # Trova colore più frequente
+        dominant = max(pixel_count, key=pixel_count.get)
+        r, g, b = dominant
+
+        # Converti in colore Rich
+        # Se è blu predominante
+        if b > r and b > g:
+            return "blue"
+        # Se è rosso predominante
+        elif r > g and r > b:
+            return "red"
+        # Se è verde predominante
+        elif g > r and g > b:
+            return "green"
+        # Se è giallo
+        elif r > 150 and g > 150 and b < 100:
+            return "yellow"
+        # Se è scuro
+        elif r < 100 and g < 100 and b < 100:
+            return "bright_black"
+        else:
+            return "white"
+    except:
+        return "white"
+
+
+def image_to_ascii(image_path: str, width: int = 25) -> tuple:
+    """Converte un'immagine in ASCII art compatta. Ritorna (ascii_art, color)."""
+    try:
+        # ASCII characters dal più scuro al più chiaro
+        ASCII_CHARS = ["@", "#", "%", "*", "+", ":", ".", " "]
+
+        img = Image.open(image_path)
+
+        # Ottieni colore dominante
+        color = get_dominant_color(image_path)
+
+        # Converti in scala di grigi
+        img = img.convert("L")
+
+        # Ridimensiona mantenendo aspect ratio
+        aspect_ratio = img.height / img.width
+        new_height = int(width * aspect_ratio * 0.45)
+        img = img.resize((width, new_height))
+
+        # Converti pixel in ASCII
+        pixels = img.getdata()
+        ascii_str = ""
+        for i, pixel in enumerate(pixels):
+            ascii_str += ASCII_CHARS[min(pixel // 32, len(ASCII_CHARS) - 1)]
+            if (i + 1) % width == 0:
+                ascii_str += "\n"
+
+        return ascii_str.rstrip(), color
+    except Exception:
+        return None, "white"
+
+
 def show_header(logo_path: str = None):
-    """Mostra l'header professionale dell'applicazione."""
-    # Crea header elegante
-    title_text = Text("\n  WiFi QR Code Generator  \n", style="bold cyan", justify="center")
-    title_text.append("         v2.4         \n\n", style="yellow")
-    title_text.append("  Genera QR Code WiFi professionali  ", style="dim italic")
+    """Mostra l'header professionale ed elegante con logo compatto."""
+    from rich.align import Align
 
-    header_panel = Panel(
-        title_text,
-        box=box.DOUBLE,
-        border_style="bright_cyan",
-        padding=(1, 2)
-    )
+    # Header con logo piccolo ed elegante
+    header_parts = []
 
-    console.print(header_panel)
-    console.print()
-
-    # Se c'è un logo, mostra un messaggio
+    # Logo ASCII piccolo con colore del logo originale
     if logo_path and os.path.exists(logo_path):
-        logo_name = os.path.basename(logo_path)
-        logo_info = Table(show_header=False, box=None, padding=(0, 1))
-        logo_info.add_column(style="dim")
-        logo_info.add_column(style="cyan")
-        logo_info.add_row("Logo personalizzato:", logo_name)
-        console.print(Padding(logo_info, (0, 2)))
-        console.print()
+        result = image_to_ascii(logo_path, width=20)
+        if result[0]:
+            ascii_logo, logo_color = result
+            # Rendi le @ più scure usando bold
+            logo_text = Text()
+            for char in ascii_logo:
+                if char == '@':
+                    logo_text.append(char, style=f"bold {logo_color}")
+                elif char == '#':
+                    logo_text.append(char, style=f"{logo_color}")
+                else:
+                    logo_text.append(char, style=f"dim {logo_color}")
+            header_parts.append(logo_text)
+
+    # Titolo in grigio chiaro
+    title = Text()
+    title.append("\n" if header_parts else "", style="")
+    title.append("WiFi QR Code Generator", style="bold white")
+    title.append(" v2.4", style="bright_black")
+    header_parts.append(title)
+
+    # Separatore grigio
+    sep = Text("-" * 45, style="bright_black")
+    header_parts.append(sep)
+
+    console.print("\n")
+    for part in header_parts:
+        console.print(Align.center(part))
+    console.print()
 
 
 def ensure_single_logo(logo_dir: str) -> str:
@@ -259,112 +347,200 @@ def fill_pdf(template_path: str, out_pdf_path: str, ssid: str, password: str, qr
 #  MAIN
 # ---------------------------
 
+def show_menu(has_env_ssid: bool = False, has_env_password: bool = False, current_ssid: str = None):
+    """Mostra il menu principale con opzioni di override se necessario."""
+    from rich.align import Align
+
+    menu = Table(show_header=False, box=box.HEAVY_HEAD, border_style="white", padding=(0, 3))
+    menu.add_column("Tasto", style="bold white", justify="center", width=6)
+    menu.add_column("Opzione", style="white bold", width=32)
+    menu.add_column("Descrizione", style="dim", width=38)
+
+    menu.add_row("1", "[1] QR Standard", "QR code classico con moduli quadrati")
+    menu.add_row("2", "[2] QR Artistico", "QR code con moduli circolari e gradiente")
+
+    # Mostra opzioni override solo se ci sono env da cambiare
+    if has_env_ssid or has_env_password:
+        menu.add_row("", "", "")
+
+    if has_env_ssid:
+        ssid_display = current_ssid[:20] + "..." if len(current_ssid) > 20 else current_ssid
+        menu.add_row("s", "[s] Cambia SSID", f"Attuale: {ssid_display} (da .env)")
+
+    if has_env_password:
+        menu.add_row("p", "[p] Cambia Password", "Cambia password da .env")
+
+    menu.add_row("", "", "")
+    menu.add_row("0", "[0] Esci", "Termina normalmente")
+    menu.add_row("q", "[q] Esci e pulisci", "Termina e cancella variabili env")
+
+    console.print(Align.center(Panel(menu, title="[bold white]>> Menu Principale <<", border_style="white")))
+    console.print()
+
+
+def get_wifi_config():
+    """Ottiene configurazione WiFi da .env o input utente."""
+    from rich.align import Align
+
+    ssid = os.getenv("WIFI_SSID")
+    password = os.getenv("WIFI_PASSWORD")
+
+    # Se abbiamo tutto da .env, mostriamo e confermiamo
+    if ssid and password:
+        config_panel = Table(show_header=False, box=box.ROUNDED, border_style="green", padding=(0, 2))
+        config_panel.add_column("Campo", style="green bold", width=15)
+        config_panel.add_column("Valore", style="white", width=40)
+        config_panel.add_row("SSID", ssid)
+        config_panel.add_row("Password", "*" * len(password))
+
+        console.print(Align.center(Panel(config_panel, title="[green bold]Configurazione da .env", border_style="green")))
+        console.print()
+
+        if not Confirm.ask("[yellow]Usare questa configurazione?[/yellow]", default=True):
+            ssid = None
+            password = None
+
+    # Chiedi i dati mancanti
+    if not ssid:
+        console.print(Align.center(Text("Inserisci i dati della rete WiFi", style="bold white")))
+        console.print()
+        ssid = Prompt.ask("[white]SSID (nome rete)[/white]").strip()
+
+    if not password:
+        password = Prompt.ask("[white]Password WiFi[/white]", password=True).strip()
+
+    return ssid, password
+
+
+def clean_env_vars():
+    """Rimuove le variabili d'ambiente WiFi dalla sessione corrente."""
+    if "WIFI_SSID" in os.environ:
+        del os.environ["WIFI_SSID"]
+    if "WIFI_PASSWORD" in os.environ:
+        del os.environ["WIFI_PASSWORD"]
+
+
 if __name__ == "__main__":
     console.clear()
-
-    # Carica variabili da .env se presente
     load_dotenv()
 
-    # Carica logo per mostrarlo nell'header
+    # Setup percorsi
     base_dir = os.path.dirname(os.path.abspath(__file__))
     static_dir = os.path.join(base_dir, "static")
     logo_dir = os.path.join(static_dir, "logo")
-
-    try:
-        logo_path = ensure_single_logo(logo_dir)
-    except Exception:
-        logo_path = None
-
-    # Mostra header elegante con logo
-    show_header(logo_path)
-
-    # Mostra pannello configurazione
-    config_table = Table(show_header=False, box=None, padding=(0, 1))
-    config_table.add_column(style="cyan bold", width=15)
-    config_table.add_column(style="white")
-
-    # Leggi SSID da .env se specificato, altrimenti chiedi
-    ssid = os.getenv("WIFI_SSID")
-    if ssid:
-        config_table.add_row("SSID WiFi:", f"{ssid} [dim](da .env)[/dim]")
-    else:
-        console.print(Panel("Configurazione Rete WiFi", border_style="cyan", box=box.ROUNDED))
-        ssid = Prompt.ask("[cyan bold]SSID WiFi[/cyan bold]").strip()
-
-    # Leggi Password da .env se specificato, altrimenti chiedi
-    password = os.getenv("WIFI_PASSWORD")
-    if password:
-        config_table.add_row("Password:", f"{'•' * len(password)} [dim](da .env)[/dim]")
-    else:
-        password = Prompt.ask("[cyan bold]Password WiFi[/cyan bold]", password=True).strip()
-
-    # Mostra configurazione se caricata da .env
-    if os.getenv("WIFI_SSID") or os.getenv("WIFI_PASSWORD"):
-        console.print(Panel(config_table, title="Configurazione", border_style="green", box=box.ROUNDED))
-        console.print()
-
-    # Selezione tipo QR con tabella
-    qr_table = Table(show_header=True, box=box.SIMPLE, padding=(0, 2))
-    qr_table.add_column("Opzione", style="cyan bold", justify="center")
-    qr_table.add_column("Tipo QR", style="white")
-    qr_table.add_column("Descrizione", style="dim")
-    qr_table.add_row("1", "Standard", "QR code classico con moduli quadrati")
-    qr_table.add_row("2", "Artistico", "QR code con moduli circolari e gradiente")
-
-    console.print(Panel(qr_table, title="Seleziona Stile QR Code", border_style="cyan", box=box.ROUNDED))
-    style_choice = Prompt.ask("[cyan bold]Scelta[/cyan bold]", choices=["1", "2"], default="1")
-    style = "artistico" if style_choice == "2" else "standard"
-
     template_pdf = os.path.join(static_dir, "template.pdf")
 
-    # Verifica che il logo sia stato caricato correttamente
-    if not logo_path:
-        console.print(f"[red bold]✗[/red bold] Errore: Logo non trovato in {logo_dir}")
+    # Carica logo
+    try:
+        logo_path = ensure_single_logo(logo_dir)
+    except Exception as e:
+        console.print(f"[red bold]✗ Errore logo:[/red bold] {e}")
         sys.exit(1)
 
-    # output datato
-    out_root = os.path.join(base_dir, "output")
-    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    out_dir = os.path.join(out_root, ts)
-    os.makedirs(out_dir, exist_ok=True)
+    # Mostra header con logo convertito in ASCII art
+    show_header(logo_path)
 
-    # genera QR e salva PNG
+    # Ottieni configurazione WiFi
+    ssid, password = get_wifi_config()
+
+    # Traccia se vengono da env per mostrare opzioni override
+    has_env_ssid = os.getenv("WIFI_SSID") is not None
+    has_env_password = os.getenv("WIFI_PASSWORD") is not None
+
     console.print()
-    with console.status(f"[cyan bold]Generazione QR code ({style})...[/cyan bold]", spinner="dots"):
-        qr_img = generate_qr_image(ssid, password, style, logo_path)
-        qr_png_path = os.path.join(out_dir, "wifi_qr.png")
-        qr_img.convert("RGB").save(qr_png_path, "PNG")
 
-    console.print(f"[green bold]✓[/green bold] QR Code generato: [cyan]{qr_png_path}[/cyan]")
+    # Mostra menu e ottieni scelta
+    while True:
+        show_menu(has_env_ssid, has_env_password, ssid)
 
-    # chiedi se creare PDF
-    console.print()
-    make_pdf = Confirm.ask("[cyan bold]Generare anche il PDF compilato?[/cyan bold]", default=False)
+        # Costruisci choices dinamicamente
+        valid_choices = ["0", "1", "2", "q"]
+        if has_env_ssid:
+            valid_choices.append("s")
+        if has_env_password:
+            valid_choices.append("p")
 
-    if make_pdf:
-        if not os.path.exists(template_pdf):
-            console.print(f"[red bold]✗[/red bold] Template PDF non trovato: {template_pdf}")
-            sys.exit(1)
+        choice = Prompt.ask("[bold white]Scegli un'opzione[/bold white]", choices=valid_choices, default="1")
 
-        out_pdf = os.path.join(out_dir, "wifi_compilato.pdf")
+        # Gestione uscita
+        if choice == "0":
+            console.print("\n[yellow]Arrivederci![/yellow]\n")
+            sys.exit(0)
 
-        with console.status("[cyan bold]Compilazione PDF...[/cyan bold]", spinner="dots"):
-            try:
-                fill_pdf(template_pdf, out_pdf, ssid, password, qr_img.convert("RGB"))
-            except Exception as e:
-                console.print(f"[red bold]✗[/red bold] Errore compilazione PDF: {e}")
-                sys.exit(1)
+        # Gestione uscita con pulizia env
+        if choice == "q":
+            clean_env_vars()
+            console.print("\n[yellow]Variabili env pulite. Arrivederci![/yellow]\n")
+            sys.exit(0)
 
-        console.print(f"[green bold]✓[/green bold] PDF compilato: [cyan]{out_pdf}[/cyan]")
+        # Gestione override SSID
+        if choice == "s":
+            console.print()
+            new_ssid = Prompt.ask("[white]Nuovo SSID[/white]").strip()
+            if new_ssid:
+                ssid = new_ssid
+                os.environ["WIFI_SSID"] = new_ssid
+                console.print(f"[green]SSID aggiornato: {ssid}[/green]\n")
+            continue
 
-    # Riepilogo finale
-    console.print()
-    summary = Table(show_header=False, box=box.ROUNDED, border_style="green", padding=(0, 2))
-    summary.add_column(style="green bold", width=12)
-    summary.add_column(style="white")
-    summary.add_row("SSID:", ssid)
-    summary.add_row("Stile QR:", style.capitalize())
-    summary.add_row("Output:", out_dir)
+        # Gestione override Password
+        if choice == "p":
+            console.print()
+            new_password = Prompt.ask("[white]Nuova Password[/white]", password=True).strip()
+            if new_password:
+                password = new_password
+                os.environ["WIFI_PASSWORD"] = new_password
+                console.print("[green]Password aggiornata![/green]\n")
+            continue
 
-    console.print(Panel(summary, title="[green bold]✓ Completato[/green bold]", border_style="green"))
-    console.print()
+        # Determina stile QR
+        style = "standard" if choice == "1" else "artistico"
+        style_name = "Standard" if choice == "1" else "Artistico"
+
+        # Output directory
+        out_root = os.path.join(base_dir, "output")
+        ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        out_dir = os.path.join(out_root, ts)
+        os.makedirs(out_dir, exist_ok=True)
+
+        # Genera QR
+        console.print()
+        with console.status(f"[bold white]>> Generazione QR code {style}...[/bold white]", spinner="dots"):
+            qr_img = generate_qr_image(ssid, password, style, logo_path)
+            qr_png_path = os.path.join(out_dir, "wifi_qr.png")
+            qr_img.convert("RGB").save(qr_png_path, "PNG")
+
+        console.print(f"[green bold][OK][/green bold] QR Code generato: [white]{qr_png_path}[/white]\n")
+
+        # Chiedi PDF
+        make_pdf = Confirm.ask("[bold white]Generare anche il PDF compilato?[/bold white]", default=False)
+
+        if make_pdf:
+            if not os.path.exists(template_pdf):
+                console.print(f"[red bold][ERRORE][/red bold] Template PDF non trovato: {template_pdf}\n")
+            else:
+                out_pdf = os.path.join(out_dir, "wifi_compilato.pdf")
+
+                with console.status("[bold white]>> Compilazione PDF...[/bold white]", spinner="dots"):
+                    try:
+                        fill_pdf(template_pdf, out_pdf, ssid, password, qr_img.convert("RGB"))
+                        console.print(f"[green bold][OK][/green bold] PDF compilato: [white]{out_pdf}[/white]\n")
+                    except Exception as e:
+                        console.print(f"[red bold][ERRORE][/red bold] Compilazione PDF: {e}\n")
+
+        # Riepilogo
+        from rich.align import Align
+        summary = Table(show_header=False, box=box.SIMPLE, border_style="green", padding=(0, 2))
+        summary.add_column(style="green bold", width=15)
+        summary.add_column(style="white", width=50)
+        summary.add_row("SSID:", ssid)
+        summary.add_row("Stile:", style_name)
+        summary.add_row("Output:", out_dir)
+
+        console.print(Align.center(Panel(summary, title="[green bold]>> COMPLETATO <<", border_style="green")))
+        console.print()
+
+        # Chiedi se continuare
+        if not Confirm.ask("[yellow]Generare un altro QR code?[/yellow]", default=False):
+            console.print("\n[yellow]Arrivederci![/yellow]\n")
+            break
